@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>בר מצווה של מתן</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: linear-gradient(160deg, #0F1B3D 0%, #1B2C5C 55%, #24356E 100%);
+    min-height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px 16px;
+    direction: rtl;
+    color: #1A1A2E;
+  }
+  .card {
+    background: #fff;
+    border-radius: 22px;
+    max-width: 460px;
+    width: 100%;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+    overflow: hidden;
+  }
+  .hero {
+    background: linear-gradient(135deg, #C9A227 0%, #E6C458 50%, #C9A227 100%);
+    padding: 34px 24px 28px;
+    text-align: center;
+    color: #1A1A2E;
+    position: relative;
+  }
+  .hero .emoji { font-size: 42px; margin-bottom: 8px; }
+  .hero h1 { font-size: 26px; font-weight: 800; letter-spacing: 0.3px; }
+  .hero p { font-size: 14px; margin-top: 6px; opacity: 0.85; font-weight: 600; }
+
+  .details {
+    padding: 22px 24px 8px;
+    display: grid;
+    gap: 12px;
+  }
+  .detail-row {
+    display: flex; align-items: center; gap: 12px;
+    background: #F6F4EC;
+    border: 1px solid #EAE3C9;
+    border-radius: 14px;
+    padding: 12px 14px;
+  }
+  .detail-row .icon { font-size: 20px; flex-shrink: 0; width: 26px; text-align: center; }
+  .detail-row .text { font-size: 14px; color: #2B2B40; line-height: 1.4; }
+  .detail-row .text b { display: block; font-size: 15px; color: #1A1A2E; }
+  .detail-row a { color: #0369A1; text-decoration: none; font-weight: 600; }
+  .detail-row a:hover { text-decoration: underline; }
+
+  form { padding: 22px 24px 26px; }
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-size: 13px; font-weight: 700; color: #2B2B40; margin-bottom: 6px; }
+  .field input[type=text], .field input[type=number] {
+    width: 100%; padding: 12px 14px; border-radius: 12px;
+    border: 1.5px solid #DADCE6; font-size: 15px; font-family: inherit;
+    direction: rtl;
+  }
+  .field input:focus { outline: none; border-color: #C9A227; }
+
+  .attend-choice { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .attend-btn {
+    padding: 16px 10px; border-radius: 14px; border: 2px solid #DADCE6;
+    background: #fff; cursor: pointer; font-family: inherit;
+    font-size: 15px; font-weight: 700; color: #2B2B40;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    transition: all 0.15s;
+  }
+  .attend-btn .em { font-size: 26px; }
+  .attend-btn:hover { border-color: #C9A227; }
+  .attend-btn.selected-yes { border-color: #10B981; background: #ECFDF5; color: #065F46; }
+  .attend-btn.selected-no { border-color: #94A3B8; background: #F1F5F9; color: #334155; }
+
+  .count-field { margin-top: 16px; }
+  .stepper { display: flex; align-items: center; gap: 12px; }
+  .stepper button {
+    width: 42px; height: 42px; border-radius: 50%; border: 1.5px solid #DADCE6;
+    background: #F8F9FC; font-size: 20px; cursor: pointer; font-family: inherit; color: #2B2B40;
+  }
+  .stepper button:active { background: #EAECF3; }
+  .stepper .count-value { font-size: 22px; font-weight: 800; min-width: 36px; text-align: center; }
+
+  .submit-btn {
+    width: 100%; margin-top: 20px; padding: 15px; border: none; border-radius: 14px;
+    background: linear-gradient(135deg, #1B2C5C, #0F1B3D); color: #fff;
+    font-size: 16px; font-weight: 700; cursor: pointer; font-family: inherit;
+  }
+  .submit-btn:hover { opacity: 0.92; }
+  .submit-btn:disabled { opacity: 0.6; cursor: default; }
+
+  .hint { font-size: 12px; color: #8A8A9E; margin-top: 10px; text-align: center; }
+  .error-msg { color: #DC2626; font-size: 13px; margin-top: 10px; text-align: center; display: none; }
+
+  .thankyou { padding: 44px 28px; text-align: center; display: none; }
+  .thankyou .emoji { font-size: 52px; margin-bottom: 14px; }
+  .thankyou h2 { font-size: 20px; color: #1A1A2E; margin-bottom: 8px; }
+  .thankyou p { font-size: 14px; color: #5B5B6E; line-height: 1.5; }
+  .thankyou .edit-link { margin-top: 18px; display: inline-block; font-size: 13px; color: #0369A1; cursor: pointer; text-decoration: underline; }
+
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="hero">
+    <div class="emoji">🎉</div>
+    <h1>בר המצווה של מתן</h1>
+    <p id="eventDateLine">תאריך ייקבע בקרוב</p>
+  </div>
+
+  <div class="details" id="eventDetails">
+    <!-- filled by script from EVENT config -->
+  </div>
+
+  <form id="rsvpForm">
+    <div class="field">
+      <label for="guestName">שם מלא</label>
+      <input type="text" id="guestName" placeholder="לדוגמה: משפחת כהן" required>
+    </div>
+
+    <div class="field">
+      <label>האם תגיעו?</label>
+      <div class="attend-choice">
+        <button type="button" class="attend-btn" id="btnYes">
+          <span class="em">🥳</span> מגיעים
+        </button>
+        <button type="button" class="attend-btn" id="btnNo">
+          <span class="em">😔</span> לא מגיעים
+        </button>
+      </div>
+    </div>
+
+    <div class="field count-field hidden" id="countField">
+      <label>כמה אנשים מגיעים (כולל אותך)?</label>
+      <div class="stepper">
+        <button type="button" id="countMinus">−</button>
+        <span class="count-value" id="countValue">1</span>
+        <button type="button" id="countPlus">+</button>
+      </div>
+    </div>
+
+    <button type="submit" class="submit-btn" id="submitBtn" disabled>שליחת אישור</button>
+    <div class="error-msg" id="errorMsg"></div>
+    <div class="hint">אפשר לחזור ולעדכן את התשובה בכל שלב דרך אותו קישור</div>
+  </form>
+
+  <div class="thankyou" id="thankyou">
+    <div class="emoji" id="thankyouEmoji">🎊</div>
+    <h2 id="thankyouTitle">תודה שאישרתם!</h2>
+    <p id="thankyouText">נשמח לחגוג יחד עם מתן ביום המיוחד שלו.</p>
+    <span class="edit-link" id="editLink">עדכון התשובה</span>
+  </div>
+</div>
+
+<script>
+  // ---- Event details: edit these when the final info is confirmed ----
+  const EVENT = {
+    dateLine: "יום חמישי, 15.10.2026",
+    dateIcon: "📅",
+    dateLabel: "מתי",
+    time: "10:00",
+    venueName: "בית כנסת - קיבוץ ניצנים",
+    venueAddress: "",
+    mapUrl: "https://www.google.com/maps/search/?api=1&query=%D7%91%D7%99%D7%AA%20%D7%9B%D7%A0%D7%A1%D7%AA%20%D7%A7%D7%99%D7%91%D7%95%D7%A5%20%D7%A0%D7%99%D7%A6%D7%A0%D7%99%D7%9D",
+    rsvpDeadline: "1.10.2026"
+  };
+
+  function renderEventDetails() {
+    document.getElementById('eventDateLine').textContent = EVENT.dateLine;
+    const wrap = document.getElementById('eventDetails');
+    wrap.innerHTML = '';
+
+    if (EVENT.time) {
+      wrap.innerHTML += `
+        <div class="detail-row">
+          <span class="icon">🕕</span>
+          <span class="text"><b>${EVENT.time}</b>שעת התחלה</span>
+        </div>`;
+    }
+    if (EVENT.venueName) {
+      const addr = EVENT.venueAddress ? `<div>${EVENT.venueAddress}</div>` : '';
+      const mapLink = EVENT.mapUrl ? `<a href="${EVENT.mapUrl}" target="_blank" rel="noopener">פתיחה בניווט 🧭</a>` : '';
+      wrap.innerHTML += `
+        <div class="detail-row">
+          <span class="icon">📍</span>
+          <span class="text"><b>${EVENT.venueName}</b>${addr}${mapLink}</span>
+        </div>`;
+    }
+    if (EVENT.rsvpDeadline) {
+      wrap.innerHTML += `
+        <div class="detail-row">
+          <span class="icon">⏰</span>
+          <span class="text">נשמח לקבל אישור הגעה עד <b>${EVENT.rsvpDeadline}</b></span>
+        </div>`;
+    }
+  }
+  renderEventDetails();
+
+  // ---- Firebase ----
+  let fdb = null;
+  function loadScript(src) {
+    return new Promise((resolve) => {
+      const s = document.createElement('script');
+      s.src = src; s.onload = () => resolve(true); s.onerror = () => resolve(false);
+      document.head.appendChild(s);
+    });
+  }
+  async function initFirebase() {
+    await loadScript('https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js');
+    await loadScript('https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js');
+    await loadScript('https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js');
+    await loadScript('firebase-config.js');
+    try {
+      if (typeof firebase === 'undefined' || typeof firebaseConfig === 'undefined') throw new Error('SDK/config missing');
+      if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+      fdb = firebase.firestore();
+      await firebase.auth().signInAnonymously();
+      return true;
+    } catch (e) {
+      console.warn('Firebase init failed:', e.message);
+      return false;
+    }
+  }
+  const fbReady = initFirebase();
+
+  // ---- Form state ----
+  const STORAGE_KEY = 'matan-barmitzvah-rsvp-id';
+  let attending = null;
+  let count = 1;
+
+  const btnYes = document.getElementById('btnYes');
+  const btnNo = document.getElementById('btnNo');
+  const countField = document.getElementById('countField');
+  const countValue = document.getElementById('countValue');
+  const submitBtn = document.getElementById('submitBtn');
+  const form = document.getElementById('rsvpForm');
+  const errorMsg = document.getElementById('errorMsg');
+  const thankyou = document.getElementById('thankyou');
+
+  btnYes.addEventListener('click', () => {
+    attending = true;
+    btnYes.classList.add('selected-yes');
+    btnNo.classList.remove('selected-no');
+    countField.classList.remove('hidden');
+    submitBtn.disabled = false;
+  });
+  btnNo.addEventListener('click', () => {
+    attending = false;
+    btnNo.classList.add('selected-no');
+    btnYes.classList.remove('selected-yes');
+    countField.classList.add('hidden');
+    submitBtn.disabled = false;
+  });
+  document.getElementById('countMinus').addEventListener('click', () => {
+    if (count > 1) { count--; countValue.textContent = count; }
+  });
+  document.getElementById('countPlus').addEventListener('click', () => {
+    if (count < 20) { count++; countValue.textContent = count; }
+  });
+
+  function showThankYou() {
+    form.classList.add('hidden');
+    thankyou.style.display = 'block';
+    if (attending) {
+      document.getElementById('thankyouEmoji').textContent = '🎊';
+      document.getElementById('thankyouTitle').textContent = 'תודה שאישרתם!';
+      document.getElementById('thankyouText').textContent = 'נשמח לחגוג יחד עם מתן ביום המיוחד שלו.';
+    } else {
+      document.getElementById('thankyouEmoji').textContent = '💌';
+      document.getElementById('thankyouTitle').textContent = 'תודה על העדכון';
+      document.getElementById('thankyouText').textContent = 'חבל שלא תוכלו להגיע, נתראה בפעם הבאה!';
+    }
+  }
+
+  document.getElementById('editLink').addEventListener('click', () => {
+    thankyou.style.display = 'none';
+    form.classList.remove('hidden');
+  });
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    errorMsg.style.display = 'none';
+    const name = document.getElementById('guestName').value.trim();
+    if (!name) { return; }
+    if (attending === null) { return; }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'שולח...';
+
+    try {
+      await fbReady;
+      if (!fdb) throw new Error('no-db');
+
+      const data = {
+        name,
+        attending,
+        count: attending ? count : 0,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      };
+
+      let docId = localStorage.getItem(STORAGE_KEY);
+      if (docId) {
+        await fdb.collection('rsvps').doc(docId).set(data, { merge: true });
+      } else {
+        data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+        const ref = await fdb.collection('rsvps').add(data);
+        docId = ref.id;
+        localStorage.setItem(STORAGE_KEY, docId);
+      }
+      showThankYou();
+    } catch (err) {
+      console.error(err);
+      errorMsg.textContent = 'אירעה שגיאה בשליחה. נסו שוב או צרו קשר טלפוני.';
+      errorMsg.style.display = 'block';
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'שליחת אישור';
+    }
+  });
+
+  // ---- Prefill if this browser already responded ----
+  (async () => {
+    const docId = localStorage.getItem(STORAGE_KEY);
+    if (!docId) return;
+    await fbReady;
+    if (!fdb) return;
+    try {
+      const snap = await fdb.collection('rsvps').doc(docId).get();
+      if (snap.exists) {
+        const d = snap.data();
+        document.getElementById('guestName').value = d.name || '';
+        attending = d.attending;
+        count = d.count && d.count > 0 ? d.count : 1;
+        countValue.textContent = count;
+        if (attending) {
+          btnYes.classList.add('selected-yes');
+          countField.classList.remove('hidden');
+        } else {
+          btnNo.classList.add('selected-no');
+        }
+        submitBtn.disabled = false;
+        showThankYou();
+      }
+    } catch (e) { console.warn(e); }
+  })();
+</script>
+
+</body>
+</html>
