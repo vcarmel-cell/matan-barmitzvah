@@ -23,16 +23,8 @@
     box-shadow: 0 20px 60px rgba(0,0,0,0.35);
     overflow: hidden;
   }
-  .hero {
-    background: linear-gradient(135deg, #C9A227 0%, #E6C458 50%, #C9A227 100%);
-    padding: 34px 24px 28px;
-    text-align: center;
-    color: #1A1A2E;
-    position: relative;
-  }
-  .hero .emoji { font-size: 42px; margin-bottom: 8px; }
-  .hero h1 { font-size: 26px; font-weight: 800; letter-spacing: 0.3px; }
-  .hero p { font-size: 14px; margin-top: 6px; opacity: 0.85; font-weight: 600; }
+  .hero { line-height: 0; }
+  .invite-img { width: 100%; height: auto; display: block; }
 
   .details {
     padding: 22px 24px 8px;
@@ -108,9 +100,7 @@
 
 <div class="card">
   <div class="hero">
-    <div class="emoji">🎉</div>
-    <h1>בר המצווה של מתן</h1>
-    <p id="eventDateLine">תאריך ייקבע בקרוב</p>
+    <img src="invite.JPG" alt="הזמנה לבר המצווה של מתן" class="invite-img">
   </div>
 
   <div class="details" id="eventDetails">
@@ -171,7 +161,6 @@
   };
 
   function renderEventDetails() {
-    document.getElementById('eventDateLine').textContent = EVENT.dateLine;
     const wrap = document.getElementById('eventDetails');
     wrap.innerHTML = '';
 
