@@ -184,6 +184,13 @@
       </div>
     </div>
 
+    <div class="panel">
+      <div class="q" style="margin-bottom:0;">
+        <div class="q-label">דברים שחשוב לכם שנדבר עליהם בפגישה מעבר לשאלות בטופס</div>
+        <textarea id="meetingTopics"></textarea>
+      </div>
+    </div>
+
     <button type="submit" class="primary" id="submitBtn">שליחת התשובות</button>
     <div class="status" id="statusMsg"></div>
   </form>
@@ -273,6 +280,7 @@
       challenges: document.getElementById('challenges').value.trim(),
       involvement: collectGroup('involvement'),
       notes: document.getElementById('notes').value.trim(),
+      meetingTopics: document.getElementById('meetingTopics').value.trim(),
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     };
 
