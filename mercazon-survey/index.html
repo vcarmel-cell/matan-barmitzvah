@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>שאלון עמדות ותפיסות – צוות חשיבה למרכזונים</title>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<style>
+  :root{
+    --bg:#FCFCFB; --wash:#F9F9F7; --ink:#2E2C27; --ink-soft:#6B6A63;
+    --ink-grey:#B4B3A8; --hairline:#E4E3DC; --clay:#C6613F; --clay-hover:#AE5133;
+    --ok:#3F7D53; --ok-wash:#EAF3EC; --warn:#B4863B; --warn-wash:#FBF3E4;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;}
+  body{min-height:100dvh;display:flex;flex-direction:column;align-items:center;padding:24px 16px 60px;}
+  .wrap{width:100%;max-width:640px;}
+  h1{font-size:21px;margin:4px 0 2px;text-align:center;line-height:1.4;}
+  .intro{color:var(--ink-soft);font-size:14px;line-height:1.7;margin:14px 0 24px;
+    background:var(--wash);border:1px solid var(--hairline);border-radius:14px;padding:16px 18px;}
+
+  .panel{background:var(--wash);border:1px solid var(--hairline);border-radius:16px;padding:20px;margin-bottom:18px;}
+  .part-title{font-size:16px;font-weight:700;margin:0 0 16px;color:var(--clay-hover);}
+  .q{margin-bottom:18px;}
+  .q:last-child{margin-bottom:0;}
+  .q-label{font-size:15px;font-weight:600;margin-bottom:4px;}
+  .q-hint{font-size:12.5px;color:var(--ink-soft);margin-bottom:10px;line-height:1.5;}
+
+  .opt{display:flex;align-items:flex-start;gap:8px;background:#fff;border:1px solid var(--hairline);
+    border-radius:10px;padding:10px 12px;margin-bottom:8px;cursor:pointer;font-size:14.5px;line-height:1.4;}
+  .opt input{margin-top:2px;flex:none;width:17px;height:17px;accent-color:var(--clay);}
+  .opt.disabled{opacity:.45;cursor:not-allowed;}
+
+  .other-row{display:flex;gap:8px;align-items:center;margin-top:2px;}
+  .other-row input[type=text]{flex:1;border:1px solid var(--hairline);border-radius:8px;
+    padding:9px 10px;font-size:14px;background:#fff;color:var(--ink);font-family:inherit;}
+
+  textarea, input[type=text].full{
+    width:100%;border:1px solid var(--hairline);border-radius:10px;padding:11px 12px;
+    font-family:inherit;font-size:14.5px;resize:vertical;background:#fff;color:var(--ink);min-height:80px;
+  }
+  input[type=text].full{min-height:auto;}
+
+  .name-field{margin-bottom:6px;}
+
+  button.primary{
+    background:var(--clay);color:#fff;border:none;border-radius:10px;
+    padding:13px 22px;font-size:15px;font-weight:600;cursor:pointer;width:100%;
+  }
+  button.primary:hover{background:var(--clay-hover);}
+  button.primary:disabled{background:var(--ink-grey);cursor:not-allowed;}
+
+  .status{text-align:center;font-size:13px;margin-top:10px;color:var(--ink-soft);}
+  .status.err{color:#B3432E;}
+
+  .done-screen{text-align:center;padding:60px 16px;}
+  .done-screen .icon{font-size:44px;margin-bottom:10px;}
+  .done-screen h2{font-size:19px;margin:0 0 8px;}
+  .done-screen p{color:var(--ink-soft);font-size:14px;line-height:1.6;}
+</style>
+</head>
+<body>
+<div class="wrap" id="formWrap">
+  <h1>שאלון עמדות ותפיסות<br>צוות חשיבה למרכזוני הילדים והנוער (א'–י"ב)</h1>
+  <div class="intro">
+    חברות וחברים יקרים,<br><br>
+    לקראת מפגש ההתנעה של הצוות, נשמח לקבל את התובנות, המחשבות והנקודות שחשובות לכם באמת.
+    התשובות שלכם יעזרו לנו לגבש את נקודות המפתח ולמקד את תוכנית העבודה של הצוות.
+  </div>
+
+  <div class="panel">
+    <div class="q name-field">
+      <div class="q-label">שם (רשות)</div>
+      <input type="text" class="full" id="respName" placeholder="אפשר להשאיר ריק אם מעדיפים אנונימיות">
+    </div>
+  </div>
+
+  <form id="surveyForm">
+    <div class="panel">
+      <div class="part-title">חלק 1: חזון וייעוד</div>
+
+      <div class="q">
+        <div class="q-label">מהו "הלב הפועם"?</div>
+        <div class="q-hint">מהי לדעתך המטרה המרכזית והחשובה ביותר של מרכזון בלתי-פורמלי בקיבוץ כיום? (בחר/י עד 2 מרכזיות)</div>
+        <div class="opt-group" data-max="2" data-name="visionGoals">
+          <label class="opt"><input type="checkbox" value="מענה חברתי וגיבוש קבוצתי">מענה חברתי וגיבוש קבוצתי</label>
+          <label class="opt"><input type="checkbox" value="פיתוח כישורים, עשייה ויוזמה אישית/קבוצתית">פיתוח כישורים, עשייה ויוזמה אישית/קבוצתית</label>
+          <label class="opt"><input type="checkbox" value="מסגרת בטוחה, מכילה ומוגנת למפגש חופשי">מסגרת בטוחה, מכילה ומוגנת למפגש חופשי</label>
+          <label class="opt"><input type="checkbox" value="חיזוק הזהות והשייכות הקהילתית-קיבוצית">חיזוק הזהות והשייכות הקהילתית-קיבוצית</label>
+          <label class="opt"><input type="checkbox" value="סיוע ותמיכה רגשית/לימודית">סיוע ותמיכה רגשית/לימודית</label>
+        </div>
+        <div class="other-row">
+          <label class="opt" style="flex:none;padding:9px 10px;"><input type="checkbox" data-other-toggle="visionGoals" value="אחר">אחר:</label>
+          <input type="text" placeholder="פרט/י" data-other-text="visionGoals">
+        </div>
+      </div>
+
+      <div class="q">
+        <div class="q-label">איך נראה הצלחה?</div>
+        <div class="q-hint">אם נסתכל שנתיים קדימה – מה ייחשב בעיניך כהצלחה משמעותית של המערכת?</div>
+        <textarea id="visionSuccess"></textarea>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="part-title">חלק 2: התמודדות עם תופעת הנשירה (דגש על גילאי הקישור והנוער)</div>
+      <div class="q-hint" style="margin-bottom:16px;">
+        כידוע, ככל שעולים בשכבות הגיל (במיוחד במעבר לחטיבה ולתיכון), אנחנו מזהים ירידה בהשתתפות ובנוכחות של הילדים והנוער.
+      </div>
+
+      <div class="q">
+        <div class="q-label">מהם לדעתך הגורמים המרכזיים לנשירה?</div>
+        <div class="q-hint">ניתן לסמן יותר מתשובה אחת</div>
+        <div class="opt-group" data-name="dropoutFactors">
+          <label class="opt"><input type="checkbox" value="תוכן ופורמט: הפעילות לא מספיק אטרקטיבית / רלוונטית לעולם התוכן שלהם">תוכן ופורמט: הפעילות לא מספיק אטרקטיבית / רלוונטית לעולם התוכן שלהם</label>
+          <label class="opt"><input type="checkbox" value="חופש מול מסגרת: בני הנוער מעדיפים מפגש בלתי-מובנה (&quot;לרבוץ&quot; ביחד) על פני פעילות מודרכת">חופש מול מסגרת: בני הנוער מעדיפים מפגש בלתי-מובנה ("לרבוץ" ביחד) על פני פעילות מודרכת</label>
+          <label class="opt"><input type="checkbox" value="עומס חיצוני: עומס לימודי, חוגים, ספורט תחרותי ומחויבויות מחוץ לקיבוץ">עומס חיצוני: עומס לימודי, חוגים, ספורט תחרותי ומחויבויות מחוץ לקיבוץ</label>
+          <label class="opt"><input type="checkbox" value="צוות והדרכה: קושי ביצירת קשר רציף ומשמעותי עם צוות ההדרכה / תחלופה גבוהה">צוות והדרכה: קושי ביצירת קשר רציף ומשמעותי עם צוות ההדרכה / תחלופה גבוהה</label>
+          <label class="opt"><input type="checkbox" value="דינמיקה חברתית: תחושת מיצוי קבוצתית או מורכבות חברתית בתוך השכבה">דינמיקה חברתית: תחושת מיצוי קבוצתית או מורכבות חברתית בתוך השכבה</label>
+          <label class="opt"><input type="checkbox" value="תחרות מול המסכים: מענה קל וזמין יותר בבית או ברשתות">תחרות מול המסכים: מענה קל וזמין יותר בבית או ברשתות</label>
+        </div>
+        <div class="other-row">
+          <label class="opt" style="flex:none;padding:9px 10px;"><input type="checkbox" data-other-toggle="dropoutFactors" value="אחר">אחר:</label>
+          <input type="text" placeholder="פרט/י" data-other-text="dropoutFactors">
+        </div>
+      </div>
+
+      <div class="q">
+        <div class="q-label">איזה שינוי יסודי היית מציע/ה לעשות בשכבות הבוגרות כדי להחזיר אותם למרכזונים?</div>
+        <div class="q-hint">לדוגמה: שינוי שעות, מתן אוטונומיה מלאה לניהול המקום, שילוב תעסוקה/יזמות, שינוי אופי המדריך וכו'</div>
+        <textarea id="dropoutChange"></textarea>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="part-title">חלק 3: עקרונות ומפתחות להצלחה</div>
+
+      <div class="q">
+        <div class="q-label">איכויות הצוות</div>
+        <div class="q-hint">מהי התכונה או המיומנות החשובה ביותר הנדרשת מצוות הדרכה במרכזונים כיום?</div>
+        <textarea id="staffQuality"></textarea>
+      </div>
+
+      <div class="q">
+        <div class="q-label">עוצמות ונקודות לשימור</div>
+        <div class="q-hint">מה עובד כיום טוב במערכת הבלתי-פורמלית וחשוב לא לאבד אותו?</div>
+        <textarea id="strengths"></textarea>
+      </div>
+
+      <div class="q">
+        <div class="q-label">אתגרים מרכזיים</div>
+        <div class="q-hint">מהו החסם או האתגר הגדול ביותר שעומד בפנינו (תקציב, תשתיות, רצף כוח אדם, מעורבות הורים וכו')?</div>
+        <textarea id="challenges"></textarea>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="part-title">חלק 4: מעורבות אישית בצוות</div>
+      <div class="q">
+        <div class="q-label">באיזה תחום/זווית היית רוצה לתרום במיוחד בדיוני הצוות?</div>
+        <div class="opt-group" data-name="involvement">
+          <label class="opt"><input type="checkbox" value="גיבוש התפיסה החינוכית והתכנים">גיבוש התפיסה החינוכית והתכנים</label>
+          <label class="opt"><input type="checkbox" value="המענה הפיזי והתשתיות (מבנים, ציוד)">המענה הפיזי והתשתיות (מבנים, ציוד)</label>
+          <label class="opt"><input type="checkbox" value="מעורבות הורים וקהילה">מעורבות הורים וקהילה</label>
+          <label class="opt"><input type="checkbox" value="גיוס, ליווי ומודל ההדרכה">גיוס, ליווי ומודל ההדרכה</label>
+          <label class="opt"><input type="checkbox" value="מענה ייחודי לשכבות הבוגרות (ז'-י&quot;ב)">מענה ייחודי לשכבות הבוגרות (ז'-י"ב)</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="q" style="margin-bottom:0;">
+        <div class="q-label">מחשבות/הערות נוספות שחשוב להעלות כבר במפגש הראשון</div>
+        <textarea id="notes"></textarea>
+      </div>
+    </div>
+
+    <button type="submit" class="primary" id="submitBtn">שליחת התשובות</button>
+    <div class="status" id="statusMsg"></div>
+  </form>
+</div>
+
+<div class="wrap done-screen" id="doneScreen" style="display:none;">
+  <div class="icon">✅</div>
+  <h2>תודה רבה!</h2>
+  <p>התשובות שלך נשלחו ויעזרו לנו מאוד בגיבוש תוכנית העבודה של הצוות.</p>
+</div>
+
+<script>
+(function(){
+  // Reuses the "voice-reminders" Firebase project (free Spark plan) shared across
+  // several small internal apps. Writes go to a dedicated "mercazon_survey_responses"
+  // collection — not the "lists" collection other apps use.
+  const firebaseConfig = {
+    apiKey: "AIzaSyCFQSpmiSvDepYn08jNkl9Q-zCVdI0BYN4",
+    authDomain: "voice-reminders-d641e.firebaseapp.com",
+    projectId: "voice-reminders-d641e",
+    storageBucket: "voice-reminders-d641e.firebasestorage.app",
+    messagingSenderId: "900498730463",
+    appId: "1:900498730463:web:6899f5d9e9783678b0a86a"
+  };
+  let db = null, auth = null;
+  try{
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+    auth = firebase.auth();
+  } catch(e){ /* handled at submit time */ }
+
+  const form = document.getElementById('surveyForm');
+  const statusMsg = document.getElementById('statusMsg');
+  const submitBtn = document.getElementById('submitBtn');
+  const formWrap = document.getElementById('formWrap');
+  const doneScreen = document.getElementById('doneScreen');
+
+  // enforce max-N selection per option group (e.g. "עד 2")
+  document.querySelectorAll('.opt-group[data-max]').forEach(function(group){
+    const max = parseInt(group.dataset.max, 10);
+    const boxes = group.querySelectorAll('input[type=checkbox]');
+    function refresh(){
+      const checkedCount = group.querySelectorAll('input[type=checkbox]:checked').length;
+      boxes.forEach(function(cb){
+        const label = cb.closest('.opt');
+        if(!cb.checked && checkedCount >= max){
+          cb.disabled = true; label.classList.add('disabled');
+        } else {
+          cb.disabled = false; label.classList.remove('disabled');
+        }
+      });
+    }
+    boxes.forEach(function(cb){ cb.addEventListener('change', refresh); });
+  });
+
+  function collectGroup(name){
+    const group = document.querySelector('.opt-group[data-name="' + name + '"]');
+    const values = Array.from(group.querySelectorAll('input[type=checkbox]:checked'))
+      .map(function(cb){ return cb.value; })
+      .filter(function(v){ return v !== 'אחר'; });
+    const otherText = document.querySelector('input[data-other-text="' + name + '"]');
+    if(otherText && otherText.value.trim()){
+      values.push('אחר: ' + otherText.value.trim());
+    }
+    return values;
+  }
+
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+    if(!db){
+      statusMsg.textContent = 'שגיאת חיבור. נסו לרענן את הדף ולשלוח שוב.';
+      statusMsg.classList.add('err');
+      return;
+    }
+    submitBtn.disabled = true;
+    statusMsg.classList.remove('err');
+    statusMsg.textContent = 'שולח...';
+
+    const payload = {
+      name: document.getElementById('respName').value.trim(),
+      visionGoals: collectGroup('visionGoals'),
+      visionSuccess: document.getElementById('visionSuccess').value.trim(),
+      dropoutFactors: collectGroup('dropoutFactors'),
+      dropoutChange: document.getElementById('dropoutChange').value.trim(),
+      staffQuality: document.getElementById('staffQuality').value.trim(),
+      strengths: document.getElementById('strengths').value.trim(),
+      challenges: document.getElementById('challenges').value.trim(),
+      involvement: collectGroup('involvement'),
+      notes: document.getElementById('notes').value.trim(),
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+
+    function doSubmit(){
+      db.collection('mercazon_survey_responses').add(payload)
+        .then(function(){
+          formWrap.style.display = 'none';
+          doneScreen.style.display = 'block';
+        })
+        .catch(function(err){
+          console.error(err);
+          statusMsg.textContent = 'שליחה נכשלה, נסו שוב.';
+          statusMsg.classList.add('err');
+          submitBtn.disabled = false;
+        });
+    }
+
+    if(auth.currentUser){
+      doSubmit();
+    } else {
+      auth.signInAnonymously().then(doSubmit).catch(function(err){
+        console.error(err);
+        statusMsg.textContent = 'שליחה נכשלה (התחברות), נסו שוב.';
+        statusMsg.classList.add('err');
+        submitBtn.disabled = false;
+      });
+    }
+  });
+})();
+</script>
+</body>
+</html>

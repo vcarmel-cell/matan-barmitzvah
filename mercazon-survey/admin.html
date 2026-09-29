@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>תשובות השאלון – ניהול</title>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<style>
+  :root{
+    --bg:#FCFCFB; --wash:#F9F9F7; --ink:#2E2C27; --ink-soft:#6B6A63;
+    --ink-grey:#B4B3A8; --hairline:#E4E3DC; --clay:#C6613F; --clay-hover:#AE5133;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;}
+  body{min-height:100dvh;display:flex;flex-direction:column;align-items:center;padding:24px 16px 60px;}
+  .wrap{width:100%;max-width:760px;}
+  h1{font-size:19px;text-align:center;margin:6px 0 20px;}
+
+  .gate{max-width:320px;margin:80px auto 0;text-align:center;}
+  .gate input{width:100%;border:1px solid var(--hairline);border-radius:10px;padding:11px 12px;
+    font-size:15px;text-align:center;margin-bottom:10px;font-family:inherit;}
+  .gate button{background:var(--clay);color:#fff;border:none;border-radius:10px;padding:11px 18px;
+    font-size:14px;cursor:pointer;width:100%;}
+  .gate .err{color:#B3432E;font-size:13px;margin-top:8px;display:none;}
+
+  .toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:10px;flex-wrap:wrap;}
+  .count{color:var(--ink-soft);font-size:13px;}
+  .small-btn{background:#fff;color:var(--ink);border:1px solid var(--hairline);border-radius:8px;
+    padding:8px 14px;font-size:13px;cursor:pointer;}
+  .small-btn:hover{border-color:var(--clay);}
+
+  .card{background:var(--wash);border:1px solid var(--hairline);border-radius:14px;padding:16px 18px;margin-bottom:14px;}
+  .card .meta{display:flex;justify-content:space-between;color:var(--ink-soft);font-size:12px;margin-bottom:10px;}
+  .card .name{font-weight:700;color:var(--ink);}
+  .f{margin-bottom:10px;}
+  .f:last-child{margin-bottom:0;}
+  .f-label{font-size:12.5px;color:var(--ink-soft);margin-bottom:2px;}
+  .f-val{font-size:14px;line-height:1.5;white-space:pre-wrap;}
+  .f-val.empty{color:var(--ink-grey);font-style:italic;}
+  .empty-state{text-align:center;color:var(--ink-grey);padding:40px 0;}
+</style>
+</head>
+<body>
+
+<div class="gate" id="gate">
+  <h1 style="margin-bottom:16px;">גישה לתשובות השאלון</h1>
+  <input type="password" id="passInput" placeholder="קוד גישה">
+  <button id="passBtn">כניסה</button>
+  <div class="err" id="passErr">קוד שגוי</div>
+</div>
+
+<div class="wrap" id="content" style="display:none;">
+  <h1>תשובות השאלון – צוות חשיבה למרכזונים</h1>
+  <div class="toolbar">
+    <span class="count" id="countLabel">טוען...</span>
+    <button class="small-btn" id="exportBtn">ייצוא ל-CSV</button>
+  </div>
+  <div id="list"></div>
+  <div class="empty-state" id="emptyState" style="display:none;">עדיין אין תשובות.</div>
+</div>
+
+<script>
+(function(){
+  const ADMIN_PASSCODE = "3636";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCFQSpmiSvDepYn08jNkl9Q-zCVdI0BYN4",
+    authDomain: "voice-reminders-d641e.firebaseapp.com",
+    projectId: "voice-reminders-d641e",
+    storageBucket: "voice-reminders-d641e.firebasestorage.app",
+    messagingSenderId: "900498730463",
+    appId: "1:900498730463:web:6899f5d9e9783678b0a86a"
+  };
+  let db = null, auth = null;
+  try{
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+    auth = firebase.auth();
+  } catch(e){}
+
+  const gate = document.getElementById('gate');
+  const content = document.getElementById('content');
+  const passInput = document.getElementById('passInput');
+  const passBtn = document.getElementById('passBtn');
+  const passErr = document.getElementById('passErr');
+  const listEl = document.getElementById('list');
+  const countLabel = document.getElementById('countLabel');
+  const emptyState = document.getElementById('emptyState');
+  const exportBtn = document.getElementById('exportBtn');
+
+  let responses = [];
+
+  const FIELDS = [
+    ['visionGoals', 'הלב הפועם – מטרה מרכזית', true],
+    ['visionSuccess', 'איך נראה הצלחה', false],
+    ['dropoutFactors', 'גורמי נשירה', true],
+    ['dropoutChange', 'שינוי יסודי לשכבות הבוגרות', false],
+    ['staffQuality', 'איכויות הצוות', false],
+    ['strengths', 'עוצמות לשימור', false],
+    ['challenges', 'אתגרים מרכזיים', false],
+    ['involvement', 'תחום מעורבות רצוי', true],
+    ['notes', 'הערות נוספות', false]
+  ];
+
+  function fmtVal(v){
+    if(Array.isArray(v)) return v.length ? v.join(', ') : '';
+    return v || '';
+  }
+
+  function render(){
+    listEl.innerHTML = '';
+    countLabel.textContent = responses.length + ' תשובות';
+    emptyState.style.display = responses.length ? 'none' : 'block';
+    responses.forEach(function(r){
+      const card = document.createElement('div');
+      card.className = 'card';
+      const dateStr = r.createdAt && r.createdAt.toDate ? r.createdAt.toDate().toLocaleString('he-IL') : '';
+      let html = '<div class="meta"><span class="name">' + (r.name ? escapeHtml(r.name) : 'אנונימי') + '</span><span>' + dateStr + '</span></div>';
+      FIELDS.forEach(function(f){
+        const val = fmtVal(r[f[0]]);
+        html += '<div class="f"><div class="f-label">' + f[1] + '</div><div class="f-val' + (val ? '' : ' empty') + '">' + (val ? escapeHtml(val) : '—') + '</div></div>';
+      });
+      card.innerHTML = html;
+      listEl.appendChild(card);
+    });
+  }
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+
+  function loadResponses(){
+    db.collection('mercazon_survey_responses').orderBy('createdAt', 'desc').get()
+      .then(function(snap){
+        responses = snap.docs.map(function(d){ return d.data(); });
+        render();
+      })
+      .catch(function(err){
+        console.error(err);
+        countLabel.textContent = 'שגיאה בטעינת התשובות';
+      });
+  }
+
+  function unlock(){
+    gate.style.display = 'none';
+    content.style.display = 'block';
+    auth.signInAnonymously().then(loadResponses).catch(function(err){
+      console.error(err);
+      countLabel.textContent = 'שגיאת התחברות';
+    });
+  }
+
+  passBtn.addEventListener('click', function(){
+    if(passInput.value === ADMIN_PASSCODE){
+      sessionStorage.setItem('mercazonSurveyAdminOk', '1');
+      unlock();
+    } else {
+      passErr.style.display = 'block';
+    }
+  });
+  passInput.addEventListener('keydown', function(e){ if(e.key === 'Enter') passBtn.click(); });
+
+  if(sessionStorage.getItem('mercazonSurveyAdminOk') === '1'){
+    unlock();
+  }
+
+  exportBtn.addEventListener('click', function(){
+    const headers = ['שם', 'תאריך'].concat(FIELDS.map(function(f){ return f[1]; }));
+    const rows = responses.map(function(r){
+      const dateStr = r.createdAt && r.createdAt.toDate ? r.createdAt.toDate().toLocaleString('he-IL') : '';
+      const cells = [r.name || '', dateStr].concat(FIELDS.map(function(f){ return fmtVal(r[f[0]]); }));
+      return cells.map(csvCell).join(',');
+    });
+    const csv = '﻿' + headers.map(csvCell).join(',') + '\n' + rows.join('\n');
+    const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'mercazon-survey-responses.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  function csvCell(v){
+    return '"' + String(v).replace(/"/g, '""') + '"';
+  }
+})();
+</script>
+</body>
+</html>
