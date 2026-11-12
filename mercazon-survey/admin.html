@@ -48,9 +48,9 @@
 
 <div class="gate" id="gate">
   <h1 style="margin-bottom:16px;">גישה לתשובות השאלון</h1>
-  <input type="password" id="passInput" placeholder="קוד גישה">
+  <input type="password" id="passInput" placeholder="סיסמת ניהול" aria-label="סיסמת ניהול" autocomplete="current-password">
   <button id="passBtn">כניסה</button>
-  <div class="err" id="passErr">קוד שגוי</div>
+  <div class="err" id="passErr" role="alert">סיסמה שגויה</div>
 </div>
 
 <div class="wrap" id="content" style="display:none;">
@@ -65,7 +65,9 @@
 
 <script>
 (function(){
-  const ADMIN_PASSCODE = "3636";
+  // Shared admin account of the voice-reminders project; Firestore rules allow reading
+  // mercazon_survey_responses only to this signed-in user.
+  const ADMIN_EMAIL = "apps-admin@next1.co.il";
 
   const firebaseConfig = {
     apiKey: "AIzaSyCFQSpmiSvDepYn08jNkl9Q-zCVdI0BYN4",
@@ -148,28 +150,28 @@
       });
   }
 
-  function unlock(){
-    gate.style.display = 'none';
-    content.style.display = 'block';
-    auth.signInAnonymously().then(loadResponses).catch(function(err){
+  function showContent(on){
+    gate.style.display = on ? 'none' : '';
+    content.style.display = on ? 'block' : 'none';
+  }
+
+  function login(){
+    passErr.style.display = 'none';
+    passBtn.disabled = true;
+    auth.signInWithEmailAndPassword(ADMIN_EMAIL, passInput.value).catch(function(err){
       console.error(err);
-      countLabel.textContent = 'שגיאת התחברות';
-    });
-  }
-
-  passBtn.addEventListener('click', function(){
-    if(passInput.value === ADMIN_PASSCODE){
-      sessionStorage.setItem('mercazonSurveyAdminOk', '1');
-      unlock();
-    } else {
       passErr.style.display = 'block';
-    }
-  });
-  passInput.addEventListener('keydown', function(e){ if(e.key === 'Enter') passBtn.click(); });
-
-  if(sessionStorage.getItem('mercazonSurveyAdminOk') === '1'){
-    unlock();
+    }).then(function(){ passBtn.disabled = false; });
   }
+
+  passBtn.addEventListener('click', login);
+  passInput.addEventListener('keydown', function(e){ if(e.key === 'Enter') login(); });
+
+  auth.onAuthStateChanged(function(user){
+    const ok = !!(user && user.email === ADMIN_EMAIL);
+    showContent(ok);
+    if(ok){ passInput.value = ''; loadResponses(); }
+  });
 
   exportBtn.addEventListener('click', function(){
     const headers = ['שם', 'תאריך'].concat(FIELDS.map(function(f){ return f[1]; }));
